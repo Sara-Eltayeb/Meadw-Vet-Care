@@ -1,29 +1,16 @@
-const SHEET_ID = '1JhSODtviGHzXru6Eb5MhfXfVIF5vtJk3pclzzv7j2l4';
-const GID = '1277715587';
+const SHEET_ID = '1zuXAKwPE6KGpkPMAVyMnPb6xnlSz68ObSQUwiLwO0j0';
+const GID = '1578696602';
 const fallback = [
-  ['MVC-004','Consultation','Dog','230','20','Yes','Mon-Fri','5','Telehealth video consult'],
-  ['MVC-001','Consultation','Dog','55','25','Yes','Mon-Sat','0','15% off this month','General consultation'],
-  ['MVC-043','Dental','Dog','325','90','Yes','Mon-Fri','4','Free nail trim included','Scale & polish (dental)'],
-  ['MVC-088','Emergency','Dog','260','60','No','24/7','2','20% off in July','Emergency stabilisation'],
-  ['MVC-085','Emergency','Dog','150','40','No','24/7','2','','Out-of-hours emergency consult'],
-  ['MVC-066','Diagnostics','Cat','185','45','Yes','Mon-Fri','0','Book online & save 10%','Ultrasound scan'],
-  ['MVC-052','Surgery','Cat','180','90','Yes','Mon-Fri','8','20% off in July','Neutering (spay/castrate)'],
-  ['MVC-014','Preventive','Dog','60','30','Yes','Mon-Sat','6','Free nail trim included','Annual wellness check'],
-  ['MVC-037','Microchip & ID','Dog','95','40','Yes','Mon-Fri','3','Pet passport & travel cert','Microchipping'],
-  ['MVC-034','Microchip & ID','Dog','30','15','No','Mon-Sat','5','','Microchipping'],
-  ['MVC-005','Consultation','Cat','30','20','Yes','Mon-Fri','7','Telehealth video consult'],
-  ['MVC-003','Consultation','Rabbit','55','25','Yes','Mon-Sat','5','20% off in July','General consultation'],
-  ['MVC-084','Consultation','Bird','50','30','Yes','Tue-Thu','5','','Avian health check'],
-  ['MVC-083','Consultation','Small mammal','42','25','Yes','Mon-Fri','2','Free nail trim included','Small-mammal health check'],
-  ['MVC-077','Grooming','Dog','18','15','No','Mon-Sat','5','20% off in July','Nail clipping'],
-  ['MVC-031','Vaccination','Dog','38','15','Yes','Mon-Sat','3','','Kennel cough vaccine']
+  ['MW-001','Body Care','Body Care','16.95','500ml','In stock','Warm Vanilla Sugar','Moisturising body lotion'],
+  ['MW-002','Candles','Candles','24.95','411g','In stock','A Thousand Wishes','Three-wick candle'],
+  ['MW-003','Gifts','Gifts','29.95','Gift set','In stock','Japanese Cherry Blossom','Body care gift set']
 ];
 let services = fallback.map(makeService);
 let selectedFilter = 'All';
 let holidays = [];
 let weather = null;
 
-function makeService(row) { return { id: row[0], category: row[1], species: row[2], price: Number(String(row[3]).replace(/[^\d.-]/g, '')) || 0, duration: row[4], appointment: row[5], availability: row[6], slots: row[7], offer: row[8] || '', name: row[9] || row[8] || 'General consultation' }; }
+function makeService(row) { return { id: row[0], category: row[1] || 'Product', species: row[2] || row[1] || 'Retail', price: Number(String(row[3]).replace(/[^\d.-]/g, '')) || 0, duration: row[4] || '', appointment: row[5] || '', availability: row[6] || '', slots: row[7] || '', offer: row[8] || '', name: row[9] || row[2] || row[1] || 'Product' }; }
 function parseSheet(text) {
   const start = text.indexOf('('), end = text.lastIndexOf(')');
   if (start < 0 || end < 0) return [];
@@ -58,17 +45,17 @@ function renderSignals() {
 }
 function euro(n) { return `€${Number(n).toLocaleString('en-IE')}`; }
 function renderServices() {
-  const visible = services.filter(s => selectedFilter === 'All' || s.species === selectedFilter);
-  document.querySelector('#serviceCount').textContent = `${services.length >= 90 ? '90+' : services.length} services`;
+  const visible = services.filter(s => selectedFilter === 'All' || s.category === selectedFilter || s.species === selectedFilter);
+  document.querySelector('#serviceCount').textContent = `${services.length} products`;
   document.querySelector('#serviceList').innerHTML = visible.slice(0, 9).map(s => `<div class="service-row"><div><strong>${s.name}</strong><small>${s.category} · ${s.species}</small></div><div><div class="price">${euro(s.price)}</div><div class="tag">${s.slots} slots</div></div></div>`).join('');
 }
 function answer(question) {
   const q = question.toLowerCase();
   const nextHoliday = holidays.find(item => new Date(item.date) >= new Date(new Date().toDateString()));
   if (q.includes('holiday') || q.includes('bank holiday') || q.includes('open')) {
-    if (!nextHoliday) return { text: `I cannot confirm an upcoming Irish public holiday from the live feed right now, so I will not guess the clinic's opening hours. Please check the clinic directly.` };
+    if (!nextHoliday) return { text: `I cannot confirm an upcoming Irish public holiday from the live feed right now, so I will not guess store opening hours. Please check the store directly.` };
     const date = new Intl.DateTimeFormat('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(nextHoliday.date));
-    return { text: `The next Irish public holiday is ${nextHoliday.localName} on ${date}. Opening hours are not confirmed in the service directory, so please review the clinic schedule before promising that we are open.` };
+    return { text: `The next Irish public holiday is ${nextHoliday.localName} on ${date}. Store opening hours are not confirmed in the retail catalogue, so please check the store schedule before visiting.` };
   }
   if (q.includes('weather') || q.includes('hot') || q.includes('walk') || q.includes('temperature')) {
     const temp = weather?.current?.temperature_2m;
@@ -76,14 +63,15 @@ function answer(question) {
     return { text: `Dublin is ${Math.round(temp)}°C right now. ${temp >= 24 ? 'That is a warm-weather signal: suggest shorter, cooler walks and fresh water, especially for senior or flat-faced dogs.' : 'There is no heat signal from the current temperature. Keep normal outdoor-care advice in place.'}` };
   }
   let found = services.filter(s => (q.includes('dog') ? s.species === 'Dog' : q.includes('cat') ? s.species === 'Cat' : q.includes('rabbit') ? s.species === 'Rabbit' : true));
-  if (q.includes('microchip')) found = services.filter(s => s.category === 'Microchip & ID');
-  else if (q.includes('telehealth')) found = services.filter(s => s.name.toLowerCase().includes('telehealth'));
+  if (q.includes('candle')) found = services.filter(s => `${s.category} ${s.name}`.toLowerCase().includes('candle'));
+  else if (q.includes('gift')) found = services.filter(s => `${s.category} ${s.name}`.toLowerCase().includes('gift'));
+  else if (q.includes('body') || q.includes('lotion')) found = services.filter(s => `${s.category} ${s.name}`.toLowerCase().includes('body') || `${s.category} ${s.name}`.toLowerCase().includes('lotion'));
   else if (q.includes('offer') || q.includes('discount')) found = services.filter(s => s.offer);
   else if (q.includes('emergency')) found = services.filter(s => s.category === 'Emergency');
   else if (q.includes('dental')) found = services.filter(s => s.category === 'Dental');
   found = found.slice(0, 4);
-  if (!found.length) return { text: `I couldn't find a matching service in the live directory. Try asking about a species, service, price or offer.` };
-  const subject = q.includes('offer') || q.includes('discount') ? 'Here are the current offers I found:' : `I found ${found.length === 1 ? 'this service' : 'these services'} in Meadow's live directory:`;
+  if (!found.length) return { text: `I couldn't find a matching product in the live catalogue. Try asking about a product, category, price or offer.` };
+  const subject = q.includes('offer') || q.includes('discount') ? 'Here are the current offers I found:' : `I found ${found.length === 1 ? 'this product' : 'these products'} in Meadow's live catalogue:`;
   return { text: subject, cards: found };
 }
 async function askAi(question) {
