@@ -20,6 +20,8 @@ const fallback = [
 ];
 let services = fallback.map(makeService);
 let selectedFilter = 'All';
+let holidays = [];
+let weather = null;
 
 function makeService(row) { return { id: row[0], category: row[1], species: row[2], price: Number(String(row[3]).replace(/[^\d.-]/g, '')) || 0, duration: row[4], appointment: row[5], availability: row[6], slots: row[7], offer: row[8] || '', name: row[9] || row[8] || 'General consultation' }; }
 function parseSheet(text) {
@@ -34,6 +36,24 @@ async function loadLiveData() {
     const live = parseSheet(await response.text());
     if (live.length) { services = live; renderServices(); }
   } catch (error) { /* The local set keeps the guide useful when CORS or offline blocks Sheets. */ }
+  try {
+    const [holidayResponse, weatherResponse] = await Promise.all([
+      fetch(`https://date.nager.at/api/v3/PublicHolidays/${new Date().getFullYear()}/IE`),
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=53.3498&longitude=-6.2603&current=temperature_2m,weather_code&timezone=Europe%2FDublin')
+    ]);
+    if (holidayResponse.ok) holidays = await holidayResponse.json();
+    if (weatherResponse.ok) weather = await weatherResponse.json();
+    renderSignals();
+  } catch (error) { renderSignals(); }
+}
+function renderSignals() {
+  const today = new Date();
+  const next = holidays.find(item => new Date(item.date) >= new Date(today.toDateString()));
+  document.querySelector('#holidayName').textContent = next ? next.localName : 'No upcoming holiday found';
+  document.querySelector('#holidayDate').textContent = next ? new Intl.DateTimeFormat('en-IE', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(next.date)) : 'Check opening hours manually';
+  const temp = weather?.current?.temperature_2m;
+  document.querySelector('#weatherValue').textContent = temp == null ? 'Weather unavailable' : `${Math.round(temp)}°C in Dublin`;
+  document.querySelector('#weatherAdvice').textContent = temp >= 24 ? 'Warm: suggest cool-time walks' : temp == null ? 'Try again shortly' : 'No heat signal right now';
 }
 function euro(n) { return `€${Number(n).toLocaleString('en-IE')}`; }
 function renderServices() {
@@ -43,6 +63,17 @@ function renderServices() {
 }
 function answer(question) {
   const q = question.toLowerCase();
+  const nextHoliday = holidays.find(item => new Date(item.date) >= new Date(new Date().toDateString()));
+  if (q.includes('holiday') || q.includes('bank holiday') || q.includes('open')) {
+    if (!nextHoliday) return { text: `I cannot confirm an upcoming Irish public holiday from the live feed right now, so I will not guess the clinic's opening hours. Please check the clinic directly.` };
+    const date = new Intl.DateTimeFormat('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(nextHoliday.date));
+    return { text: `The next Irish public holiday is ${nextHoliday.localName} on ${date}. Opening hours are not confirmed in the service directory, so please review the clinic schedule before promising that we are open.` };
+  }
+  if (q.includes('weather') || q.includes('hot') || q.includes('walk') || q.includes('temperature')) {
+    const temp = weather?.current?.temperature_2m;
+    if (temp == null) return { text: `The Dublin weather feed has not responded yet. I cannot safely assess walking conditions without a current reading.` };
+    return { text: `Dublin is ${Math.round(temp)}°C right now. ${temp >= 24 ? 'That is a warm-weather signal: suggest shorter, cooler walks and fresh water, especially for senior or flat-faced dogs.' : 'There is no heat signal from the current temperature. Keep normal outdoor-care advice in place.'}` };
+  }
   let found = services.filter(s => (q.includes('dog') ? s.species === 'Dog' : q.includes('cat') ? s.species === 'Cat' : q.includes('rabbit') ? s.species === 'Rabbit' : true));
   if (q.includes('microchip')) found = services.filter(s => s.category === 'Microchip & ID');
   else if (q.includes('telehealth')) found = services.filter(s => s.name.toLowerCase().includes('telehealth'));
@@ -54,12 +85,20 @@ function answer(question) {
   const subject = q.includes('offer') || q.includes('discount') ? 'Here are the current offers I found:' : `I found ${found.length === 1 ? 'this service' : 'these services'} in Meadow's live directory:`;
   return { text: subject, cards: found };
 }
-function send(question) {
+async function askAi(question) {
+  const endpoint = window.MEADOW_AI_ENDPOINT || '/api/chat';
+  const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, services, holidays, weather }) });
+  if (!response.ok) throw new Error('AI service unavailable');
+  const data = await response.json();
+  return { text: data.answer || 'I could not produce an answer from the connected clinic data.' };
+}
+async function send(question) {
   if (!question.trim()) return;
   const conversation = document.querySelector('#conversation');
   conversation.insertAdjacentHTML('beforeend', `<div class="message user">${question.replace(/[<>]/g, '')}</div>`);
-  const result = answer(question);
+  let result;
+  try { result = await askAi(question); } catch (error) { result = answer(question); }
   const cards = result.cards ? `<div class="answer-card">${result.cards.map(s => `<div><strong>${s.name}</strong><small>${s.species} · ${s.duration} min · ${s.availability}</small></div><div><b>${euro(s.price)}</b><span>${s.offer || `${s.slots} slots`}</span></div>`).join('')}</div>` : '';
-  setTimeout(() => { conversation.insertAdjacentHTML('beforeend', `<div class="message bot"><strong>Meadow Guide</strong><br>${result.text}${cards}</div>`); conversation.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 250);
+  setTimeout(() => { conversation.insertAdjacentHTML('beforeend', `<div class="message bot"><strong>Meadow Guide</strong><br>${result.text.replace(/[<>]/g, '')}${cards}</div>`); conversation.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 250);
 }
 document.querySelector('#chatForm').addEventListener('submit', e => { e.preventDefault(); const input = document.querySelector('#questionInput'); send(input.value); input.value = ''; });

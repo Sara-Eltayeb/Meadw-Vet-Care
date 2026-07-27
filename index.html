@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="signals.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -34,7 +35,7 @@
         </section>
       </main>
 
-      <aside class="insights"><div class="insights-heading"><div><span class="eyebrow">LIVE DIRECTORY</span><h2>Meadow services</h2></div><button class="close-insights">×</button></div><div class="data-pulse"><span class="pulse-dot"></span><div><strong id="serviceCount">90+ services</strong><small>Available in our directory</small></div><span class="refresh">↻</span></div><div class="filter-row"><button class="filter active" data-filter="All">All</button><button class="filter" data-filter="Dog">Dogs</button><button class="filter" data-filter="Cat">Cats</button><button class="filter" data-filter="Rabbit">Rabbits</button></div><div class="service-list" id="serviceList"></div><button class="view-all" id="viewAll">View all services <span>→</span></button><div class="sheet-note"><span>▣</span><div><strong>Connected to live data</strong><small>Google Sheet · synced just now</small></div></div></aside>
+      <aside class="insights"><div class="insights-heading"><div><span class="eyebrow">LIVE DIRECTORY</span><h2>Meadow services</h2></div><button class="close-insights">×</button></div><div class="data-pulse"><span class="pulse-dot"></span><div><strong id="serviceCount">90+ services</strong><small>Available in our directory</small></div><span class="refresh">↻</span></div><div class="care-signals"><div class="signal"><span class="signal-icon">◷</span><div><small>Next Irish public holiday</small><strong id="holidayName">Checking...</strong><b id="holidayDate">Nager.Date live feed</b></div></div><div class="signal"><span class="signal-icon weather">☼</span><div><small>Dublin weather signal</small><strong id="weatherValue">Checking...</strong><b id="weatherAdvice">Open-Meteo live feed</b></div></div></div><div class="filter-row"><button class="filter active" data-filter="All">All</button><button class="filter" data-filter="Dog">Dogs</button><button class="filter" data-filter="Cat">Cats</button><button class="filter" data-filter="Rabbit">Rabbits</button></div><div class="service-list" id="serviceList"></div><button class="view-all" id="viewAll">View all services <span>→</span></button><div class="sheet-note"><span>▣</span><div><strong>Connected to live data</strong><small>Google Sheet · synced just now</small></div></div></aside>
     </div>
     <script src="script.js"></script>
   </body>
