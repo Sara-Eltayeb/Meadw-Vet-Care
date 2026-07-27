@@ -47,6 +47,7 @@ async function loadLiveData() {
   } catch (error) { renderSignals(); }
 }
 function renderSignals() {
+  if (!document.querySelector('#holidayName')) return;
   const today = new Date();
   const next = holidays.find(item => new Date(item.date) >= new Date(today.toDateString()));
   document.querySelector('#holidayName').textContent = next ? next.localName : 'No upcoming holiday found';
