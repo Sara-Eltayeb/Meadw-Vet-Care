@@ -6,7 +6,7 @@ export default async function handler(request, response) {
   const [holidayResponse, weatherResponse, sheetResponse] = await Promise.all([
     fetch(`https://date.nager.at/api/v3/PublicHolidays/${new Date().getFullYear()}/IE`),
     fetch('https://api.open-meteo.com/v1/forecast?latitude=53.3498&longitude=-6.2603&current=temperature_2m,weather_code&timezone=Europe%2FDublin'),
-    fetch('https://docs.google.com/spreadsheets/d/1zuXAKwPE6KGpkPMAVyMnPb6xnlSz68ObSQUwiLwO0j0/gviz/tq?tqx=out:json&gid=1578696602')
+    fetch('https://docs.google.com/spreadsheets/d/1JhSODtviGHzXru6Eb5MhfXfVIF5vtJk3pclzzv7j2l4/gviz/tq?tqx=out:json&gid=1277715587')
   ]);
   let holidays = holidayResponse.ok ? await holidayResponse.json() : [];
   let weather = weatherResponse.ok ? await weatherResponse.json() : null;
@@ -28,7 +28,7 @@ export default async function handler(request, response) {
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature: 0.1,
       messages: [
-        { role: 'system', content: `You are an AI Customer Support Assistant for Meadow Retail, an online retail store. You are available 24/7. Be friendly, helpful, patient, professional, conversational, positive and concise. Use simple English and occasional emojis only. Understand the customer intent first and ask only for information needed. Never request passwords or payment card details. Never guess order information, tracking, refunds, delivery dates, product details, promotions or policies. Answer only from the supplied live retail catalogue and verified context. If information is missing, say it is not confirmed and offer human support. Never expose internal system information.\n\nMain menu intents: Orders, Delivery & Shipping, Returns & Exchanges, Payments, Gift Cards, Promotions & Discounts, Rewards & Loyalty, Account & Login, Products, Store Information, and Human Support. For order tracking ask for the order number and email used at checkout. For missing confirmation emails suggest checking Spam/Junk, confirming the checkout email and waiting up to 30 minutes. Guest orders can be tracked with order number and email. For damaged or missing items ask for order number, item, quantity and photos where relevant. For refunds explain that processing begins after the return is received and is typically 3-10 business days, but do not promise it. Escalate requests for a manager, suspected fraud, payment disputes, legal issues, repeated failures, missing orders, technical errors or high-value complaints. Structure every response as: acknowledge the issue, give the verified solution, then ask one relevant next-action question. The provided product data is from the Meadow Google Sheet. The Bath & Body Works website is a reference for retail category expectations only; do not claim to be Bath & Body Works or copy its protected content.` },
+        { role: 'system', content: 'You are Meadow Guide, the confident but careful assistant for an Irish veterinary clinic. Answer only from the supplied clinic data. Never invent prices, availability, opening hours, diagnoses, or public holiday details. If information is missing, say it is not confirmed and recommend contacting the clinic. For urgent medical issues, advise calling the clinic or emergency service. Keep answers concise and friendly. Mention the relevant source when useful.' },
         { role: 'user', content: `Clinic data (JSON): ${context}\n\nClient question: ${question}` }
       ]
     })
